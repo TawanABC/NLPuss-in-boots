@@ -1,3 +1,4 @@
+from selenium.webdriver.common.keys import Keys
 import time
 import io
 import re
@@ -26,6 +27,8 @@ options.add_experimental_option("detach", True)
 driver = webdriver.Chrome(options=options)
 
 # === Screenshot function ===
+
+
 def get_screenshot_from_driver(driver, save_path="screen.png"):
     screenshot = driver.get_screenshot_as_png()
     image = Image.open(io.BytesIO(screenshot)).convert("RGB")
@@ -33,11 +36,13 @@ def get_screenshot_from_driver(driver, save_path="screen.png"):
     return save_path
 
 # === OCR processing ===
+
+
 def extract_screen_data(driver):
     path = get_screenshot_from_driver(driver)
     result = ocr.ocr(path, cls=False)
     elements = []
-    
+
     boxes = []
     txts = []
     scores = []
@@ -76,7 +81,8 @@ def extract_screen_data(driver):
 
     if font_path:
         image = Image.open(path).convert("RGB")
-        im_show = draw_ocr(np.array(image), boxes, txts, scores, font_path=font_path)
+        im_show = draw_ocr(np.array(image), boxes, txts,
+                           scores, font_path=font_path)
         Image.fromarray(im_show).save("drawing.png")
     else:
         print("⚠️ No font found for drawing boxes. Skipped image annotation.")
@@ -110,8 +116,9 @@ User's goal: {goal}
 
 🖼️ Visible text elements:
 """ + "\n".join(
-        [f"{i}. '{el['text']}' at {el['bbox']}" for i, el in enumerate(elements)]
-) + """
+        [f"{i}. '{el['text']}' at {el['bbox']}" for i,
+            el in enumerate(elements)]
+    ) + """
 
 What should the system do next?
 
@@ -137,7 +144,6 @@ REASON: explain your choice
     except Exception as e:
         print("⚠️ Failed to parse LLM response:", res)
     return action
-
 
 
 # === Click using JavaScript at pixel coordinates ===
@@ -182,9 +188,8 @@ def click_at_pixel(driver, x, y):
     driver.execute_script(script)
 
 
-
 # === Type using JavaScript ===
-from selenium.webdriver.common.keys import Keys
+
 
 def type_into_active_element(driver, text, press_enter=True):
     try:
@@ -200,10 +205,9 @@ def type_into_active_element(driver, text, press_enter=True):
 # === Ask Gemini if task is done ===
 def ask_if_task_is_done(goal, elements, last_action, history):
 
-
     model = genai.GenerativeModel("models/gemini-2.0-flash")
     visible = "\n".join([el["text"] for el in elements])
-    
+
     action_summary = f"""
 Last action taken:
 - ACTION: {last_action['action']}
@@ -234,7 +238,6 @@ ADVICE: (If NO, explain what went wrong or what to try next)
 """
 
     return model.generate_content(prompt).text.strip()
-
 
 
 # === Main Loop ===
@@ -275,7 +278,8 @@ while True:
         center_y = (bbox[1] + bbox[3]) // 2
 
         if action["action"] == "click":
-            print(f"🖱️ Clicking: {elements[target_idx]['text']} at ({center_x}, {center_y})")
+            print(
+                f"🖱️ Clicking: {elements[target_idx]['text']} at ({center_x}, {center_y})")
             click_at_pixel(driver, center_x, center_y)
 
         elif action["action"] == "type":
@@ -286,8 +290,8 @@ while True:
 
         time.sleep(1.5)
         updated_elements = extract_screen_data(driver)
-        judge = ask_if_task_is_done(user_input, updated_elements, action, history)
-
+        judge = ask_if_task_is_done(
+            user_input, updated_elements, action, history)
 
         if "DONE: YES" in judge:
             print("✅ Task completed.")
